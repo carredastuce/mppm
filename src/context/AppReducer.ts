@@ -1,4 +1,5 @@
 import { AppState, AppAction } from '../types'
+import { mergeStates } from '../utils/sync'
 
 export const initialState: AppState = {
   transactions: [],
@@ -136,6 +137,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
       return { ...state, parentSettings: updated }
     }
+
+    case 'SYNC_STATE':
+      return mergeStates(state, action.payload)
+
+    case 'SET_FAMILY_CODE':
+      return { ...state, linkedFamilyCode: action.payload }
 
     default:
       return state

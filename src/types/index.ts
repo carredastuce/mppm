@@ -42,6 +42,7 @@ export interface ParentSettings {
   childName?: string
   spendingWarningThreshold?: number
   allowance?: Allowance
+  familyCode?: string
 }
 
 export type ParentTab = 'dashboard' | 'allowance' | 'jobs' | 'history' | 'settings'
@@ -51,6 +52,7 @@ export interface AppState {
   goals: Goal[]
   jobs: Job[]
   parentSettings?: ParentSettings
+  linkedFamilyCode?: string
 }
 
 export type TransactionType = 'income' | 'expense'
@@ -73,3 +75,5 @@ export type AppAction =
   | { type: 'RESET_CHILD_DATA' }
   | { type: 'SET_PARENT_SETTINGS'; payload: ParentSettings }
   | { type: 'UPDATE_PARENT_SETTINGS'; payload: Partial<ParentSettings> }
+  | { type: 'SYNC_STATE'; payload: AppState }
+  | { type: 'SET_FAMILY_CODE'; payload: string }

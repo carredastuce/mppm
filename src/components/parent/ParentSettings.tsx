@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
-import { Settings, Download, Upload, AlertTriangle } from 'lucide-react'
+import { Settings, Download, Upload, AlertTriangle, Link, Copy, Check, Unlink } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { hashPin, verifyPin, validatePin } from '../../utils/pin'
 import { exportToJSON, importFromJSON } from '../../utils/storage'
+import { generateFamilyCode, pushStateToCloud } from '../../utils/sync'
 import Input from '../shared/Input'
 import Button from '../shared/Button'
 import Modal from '../shared/Modal'
@@ -23,6 +24,29 @@ export default function ParentSettings() {
   const [confirmPin, setConfirmPin] = useState('')
   const [pinError, setPinError] = useState<string | null>(null)
   const [pinSuccess, setPinSuccess] = useState(false)
+
+  // Sync
+  const [codeCopied, setCodeCopied] = useState(false)
+  const familyCode = parentSettings?.familyCode
+
+  const handleActivateSync = async () => {
+    const code = generateFamilyCode()
+    dispatch({ type: 'UPDATE_PARENT_SETTINGS', payload: { familyCode: code } })
+    // Push immédiatement avec le nouveau code
+    await pushStateToCloud(code, { ...state, parentSettings: { ...parentSettings!, familyCode: code } })
+  }
+
+  const handleCopyCode = () => {
+    if (!familyCode) return
+    navigator.clipboard.writeText(familyCode).then(() => {
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
+    })
+  }
+
+  const handleDeactivateSync = () => {
+    dispatch({ type: 'UPDATE_PARENT_SETTINGS', payload: { familyCode: undefined } })
+  }
 
   // Import
   const [isImporting, setIsImporting] = useState(false)
@@ -218,6 +242,54 @@ export default function ParentSettings() {
               <Button onClick={handlePinChange}>Valider</Button>
               <Button variant="secondary" onClick={() => { setShowPinChange(false); setPinError(null) }}>
                 Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Synchronisation */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <Link size={20} className="text-indigo-600" />
+          Synchronisation multi-appareils
+        </h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Génère un code famille pour lier le téléphone de votre enfant. Les données se synchronisent automatiquement.
+        </p>
+
+        {!familyCode ? (
+          <Button onClick={handleActivateSync} className="flex items-center gap-2">
+            <Link size={18} />
+            Activer la synchronisation
+          </Button>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-indigo-600 font-medium mb-2 uppercase tracking-wide">Code famille</p>
+              <p className="font-mono tracking-widest text-4xl font-bold text-indigo-700 select-all">
+                {familyCode}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Entrez ce code dans l'appareil de votre enfant pour lier les deux appareils
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={handleCopyCode}
+                className="flex items-center gap-2 flex-1"
+              >
+                {codeCopied ? <Check size={16} /> : <Copy size={16} />}
+                {codeCopied ? 'Copié !' : 'Copier le code'}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeactivateSync}
+                className="flex items-center gap-2"
+              >
+                <Unlink size={16} />
+                Désactiver
               </Button>
             </div>
           </div>
