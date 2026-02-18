@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext'
 import { calculateBalance } from '../../utils/calculations'
 import { formatCurrency } from '../../utils/formatters'
 import { exportToJSON } from '../../utils/storage'
-import Button from '../shared/Button'
 
 interface HeaderProps {
   onParentAccess: () => void
@@ -19,45 +18,45 @@ export default function Header({ onParentAccess }: HeaderProps) {
     exportToJSON(state)
   }
 
+  const title = childName ? `Porte-monnaie de ${childName}` : 'Mon petit porte monnaie'
+
   return (
     <header className="bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Titre */}
-          <div className="flex items-center gap-3">
-            <Wallet size={40} />
-            <h1 className="text-3xl font-display">
-              {childName ? `Le porte-monnaie de ${childName}` : 'Mon petit porte monnaie'}
+      <div className="px-4 py-4 max-w-6xl mx-auto">
+        {/* Layout mobile : une seule ligne compacte */}
+        <div className="flex items-center justify-between gap-3">
+
+          {/* Icône + titre */}
+          <div className="flex items-center gap-2 min-w-0">
+            <Wallet size={28} className="shrink-0" />
+            <h1 className="font-display text-lg leading-tight truncate">
+              {title}
             </h1>
           </div>
 
-          {/* Solde et actions */}
-          <div className="flex items-center gap-4">
-            <div className="text-center bg-white bg-opacity-20 px-6 py-3 rounded-lg backdrop-blur-sm">
-              <p className="text-sm opacity-90">Ton solde</p>
-              <p className="text-2xl font-bold">{formatCurrency(balance)}</p>
+          {/* Solde + actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-right bg-white bg-opacity-20 px-3 py-2 rounded-lg">
+              <p className="text-xs opacity-80">Solde</p>
+              <p className="text-base font-bold leading-tight">{formatCurrency(balance)}</p>
             </div>
 
-            {/* Export toujours accessible (lecture seule) */}
             {!hasParentSettings && (
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
                 onClick={handleExport}
-                className="flex items-center gap-2"
+                className="opacity-70 hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-white hover:bg-opacity-10"
+                title="Exporter"
               >
-                <Download size={18} />
-                Exporter
-              </Button>
+                <Download size={20} />
+              </button>
             )}
 
-            {/* Cadenas vers espace parent */}
             <button
               onClick={onParentAccess}
               className="opacity-40 hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-white hover:bg-opacity-10"
               title="Espace Parent"
             >
-              <Lock size={22} />
+              <Lock size={20} />
             </button>
           </div>
         </div>

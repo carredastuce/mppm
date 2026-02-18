@@ -29,3 +29,5 @@ resume.txt
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+.vercel
