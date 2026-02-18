@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
+import UpdatePrompt from './components/shared/UpdatePrompt'
 import Header from './components/layout/Header'
 import Navigation from './components/layout/Navigation'
 import Dashboard from './components/dashboard/Dashboard'
@@ -92,6 +93,7 @@ function App() {
   return (
     <AppProvider>
       <AppContent />
+      <UpdatePrompt />
     </AppProvider>
   )
 }
