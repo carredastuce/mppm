@@ -13,6 +13,7 @@ export default function ParentJobs() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | undefined>()
 
+  const pendingJobs = state.jobs.filter(job => job.status === 'pending_validation')
   const availableJobs = state.jobs.filter(job => job.status === 'available')
   const inProgressJobs = state.jobs.filter(job => job.status === 'in_progress')
   const completedJobs = state.jobs.filter(job => job.status === 'completed')
@@ -38,6 +39,14 @@ export default function ParentJobs() {
     dispatch({ type: 'COMPLETE_JOB', payload: { jobId, transaction } })
   }
 
+  const handleValidate = (jobId: string, transaction: Transaction) => {
+    dispatch({ type: 'VALIDATE_JOB', payload: { jobId, transaction } })
+  }
+
+  const handleReject = (jobId: string) => {
+    dispatch({ type: 'REJECT_JOB', payload: jobId })
+  }
+
   const handleEdit = (job: Job) => {
     setEditingJob(job)
     setIsModalOpen(true)
@@ -57,6 +66,16 @@ export default function ParentJobs() {
     setIsModalOpen(true)
   }
 
+  const cardProps = {
+    onAccept: handleAccept,
+    onComplete: handleComplete,
+    onValidate: handleValidate,
+    onReject: handleReject,
+    onEdit: handleEdit,
+    onDelete: handleDelete,
+    isAdultMode: true,
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -67,11 +86,11 @@ export default function ParentJobs() {
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 text-center">
           <p className="text-2xl font-bold text-green-600">{totalCompleted}</p>
-          <p className="text-xs text-gray-500">Terminés</p>
+          <p className="text-xs text-gray-500">Validés</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 text-center">
           <p className="text-2xl font-bold text-indigo-600">{formatCurrency(totalEarned)}</p>
-          <p className="text-xs text-gray-500">Total gagné</p>
+          <p className="text-xs text-gray-500">Total versé</p>
         </div>
       </div>
 
@@ -87,21 +106,32 @@ export default function ParentJobs() {
         </Button>
       </div>
 
+      {/* À valider — section prioritaire */}
+      {pendingJobs.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-lg font-bold text-purple-700">
+              ⏳ En attente de validation ({pendingJobs.length})
+            </h3>
+            <span className="bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+              Action requise
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingJobs.map((job) => (
+              <JobCard key={job.id} job={job} {...cardProps} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Boulots disponibles */}
       {availableJobs.length > 0 && (
         <div>
           <h3 className="text-lg font-bold text-gray-700 mb-3">Disponibles ({availableJobs.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {availableJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onAccept={handleAccept}
-                onComplete={handleComplete}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                isAdultMode={true}
-              />
+              <JobCard key={job.id} job={job} {...cardProps} />
             ))}
           </div>
         </div>
@@ -113,15 +143,7 @@ export default function ParentJobs() {
           <h3 className="text-lg font-bold text-gray-700 mb-3">En cours ({inProgressJobs.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {inProgressJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onAccept={handleAccept}
-                onComplete={handleComplete}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                isAdultMode={true}
-              />
+              <JobCard key={job.id} job={job} {...cardProps} />
             ))}
           </div>
         </div>
@@ -130,18 +152,10 @@ export default function ParentJobs() {
       {/* Boulots terminés */}
       {completedJobs.length > 0 && (
         <div>
-          <h3 className="text-lg font-bold text-gray-700 mb-3">Terminés ({completedJobs.length})</h3>
+          <h3 className="text-lg font-bold text-gray-700 mb-3">Validés ({completedJobs.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {completedJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onAccept={handleAccept}
-                onComplete={handleComplete}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                isAdultMode={true}
-              />
+              <JobCard key={job.id} job={job} {...cardProps} />
             ))}
           </div>
         </div>

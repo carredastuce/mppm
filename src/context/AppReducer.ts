@@ -94,6 +94,39 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ),
       }
 
+    case 'SUBMIT_JOB':
+      return {
+        ...state,
+        jobs: state.jobs.map((job) =>
+          job.id === action.payload
+            ? { ...job, status: 'pending_validation' }
+            : job
+        ),
+      }
+
+    case 'VALIDATE_JOB': {
+      const { jobId, transaction } = action.payload
+      return {
+        ...state,
+        transactions: [transaction, ...state.transactions],
+        jobs: state.jobs.map((job) =>
+          job.id === jobId
+            ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+            : job
+        ),
+      }
+    }
+
+    case 'REJECT_JOB':
+      return {
+        ...state,
+        jobs: state.jobs.map((job) =>
+          job.id === action.payload
+            ? { ...job, status: 'available', acceptedAt: undefined }
+            : job
+        ),
+      }
+
     case 'COMPLETE_JOB': {
       const { jobId, transaction } = action.payload
 

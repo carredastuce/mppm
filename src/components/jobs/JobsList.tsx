@@ -18,6 +18,7 @@ export default function JobsList() {
 
   const availableJobs = state.jobs.filter(job => job.status === 'available')
   const inProgressJobs = state.jobs.filter(job => job.status === 'in_progress')
+  const pendingJobs = state.jobs.filter(job => job.status === 'pending_validation')
   const completedJobs = state.jobs.filter(job => job.status === 'completed')
 
   const handleSubmit = (job: Job) => {
@@ -35,6 +36,10 @@ export default function JobsList() {
 
   const handleComplete = (jobId: string, transaction: Transaction) => {
     dispatch({ type: 'COMPLETE_JOB', payload: { jobId, transaction } })
+  }
+
+  const handleSubmitJob = (jobId: string) => {
+    dispatch({ type: 'SUBMIT_JOB', payload: jobId })
   }
 
   const handleEdit = (job: Job) => {
@@ -118,6 +123,7 @@ export default function JobsList() {
                 job={job}
                 onAccept={handleAccept}
                 onComplete={handleComplete}
+                onSubmit={hasParentSpace ? handleSubmitJob : undefined}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 isAdultMode={canCreate}
@@ -140,6 +146,30 @@ export default function JobsList() {
                 job={job}
                 onAccept={handleAccept}
                 onComplete={handleComplete}
+                onSubmit={hasParentSpace ? handleSubmitJob : undefined}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                isAdultMode={canCreate}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* En attente de validation */}
+      {pendingJobs.length > 0 && (
+        <div>
+          <h3 className="text-xl font-bold text-purple-600 mb-4">
+            ⏳ En attente de validation ({pendingJobs.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onAccept={handleAccept}
+                onComplete={handleComplete}
+                onSubmit={handleSubmitJob}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 isAdultMode={canCreate}
@@ -162,6 +192,7 @@ export default function JobsList() {
                 job={job}
                 onAccept={handleAccept}
                 onComplete={handleComplete}
+                onSubmit={hasParentSpace ? handleSubmitJob : undefined}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 isAdultMode={canCreate}

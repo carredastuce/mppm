@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { CheckCircle, Clock, Trash2, Edit, Star } from 'lucide-react'
+import { CheckCircle, Clock, Trash2, Edit, Star, Hourglass, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { Job, Transaction } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
 import Modal from '../shared/Modal'
@@ -10,6 +10,9 @@ interface JobCardProps {
   job: Job
   onAccept: (jobId: string) => void
   onComplete: (jobId: string, transaction: Transaction) => void
+  onSubmit?: (jobId: string) => void
+  onValidate?: (jobId: string, transaction: Transaction) => void
+  onReject?: (jobId: string) => void
   onEdit: (job: Job) => void
   onDelete: (jobId: string) => void
   isAdultMode?: boolean
@@ -19,16 +22,43 @@ export default function JobCard({
   job,
   onAccept,
   onComplete,
+  onSubmit,
+  onValidate,
+  onReject,
   onEdit,
   onDelete,
   isAdultMode = false
 }: JobCardProps) {
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [showCompleteModal, setShowCompleteModal] = useState(false)
 
-  const handleAccept = () => {
-    onAccept(job.id)
+  const handleAccept = () => onAccept(job.id)
+
+  const handleSubmit = () => {
+    onSubmit?.(job.id)
+    setShowSubmitModal(false)
   }
 
+  const handleValidate = () => {
+    const transaction: Transaction = {
+      id: uuidv4(),
+      type: 'income',
+      amount: job.reward,
+      category: 'Tâches ménagères',
+      label: `Petit boulot : ${job.title}`,
+      date: new Date().toISOString(),
+      notes: job.description,
+    }
+    onValidate?.(job.id, transaction)
+  }
+
+  const handleReject = () => {
+    if (window.confirm(`Refuser le boulot "${job.title}" ? Il sera remis comme disponible.`)) {
+      onReject?.(job.id)
+    }
+  }
+
+  // Legacy: used when no parent space configured
   const handleComplete = () => {
     const transaction: Transaction = {
       id: uuidv4(),
@@ -39,7 +69,6 @@ export default function JobCard({
       date: new Date().toISOString(),
       notes: job.description,
     }
-
     onComplete(job.id, transaction)
     setShowCompleteModal(false)
   }
@@ -61,6 +90,11 @@ export default function JobCard({
       color: 'bg-warning',
       icon: <Clock size={18} />,
     },
+    pending_validation: {
+      label: 'En attente',
+      color: 'bg-purple-500',
+      icon: <Hourglass size={18} />,
+    },
     completed: {
       label: 'Terminé',
       color: 'bg-gray-400',
@@ -69,10 +103,11 @@ export default function JobCard({
   }
 
   const config = statusConfig[job.status]
+  const hasParentValidation = !!(onSubmit || onValidate)
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 border-2 border-gray-100">
+      <div className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 border-2 ${job.status === 'pending_validation' ? 'border-purple-300' : 'border-gray-100'}`}>
         {/* Badge statut */}
         <div className="flex items-center justify-between mb-3">
           <div className={`${config.color} text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}>
@@ -99,31 +134,68 @@ export default function JobCard({
           {job.description}
         </p>
 
-        {/* Actions */}
+        {/* Actions enfant */}
         <div className="space-y-2">
           {job.status === 'available' && !isAdultMode && (
-            <Button
-              variant="primary"
-              className="w-full"
-              onClick={handleAccept}
-            >
+            <Button variant="primary" className="w-full" onClick={handleAccept}>
               Accepter ce boulot
             </Button>
           )}
 
           {job.status === 'in_progress' && !isAdultMode && (
-            <Button
-              variant="success"
-              className="w-full flex items-center justify-center gap-2"
-              onClick={() => setShowCompleteModal(true)}
-            >
-              <CheckCircle size={18} />
-              Marquer comme terminé
-            </Button>
+            hasParentValidation ? (
+              <Button
+                variant="success"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => setShowSubmitModal(true)}
+              >
+                <CheckCircle size={18} />
+                J'ai terminé !
+              </Button>
+            ) : (
+              <Button
+                variant="success"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => setShowCompleteModal(true)}
+              >
+                <CheckCircle size={18} />
+                Marquer comme terminé
+              </Button>
+            )
           )}
 
-          {/* Actions pour l'adulte */}
-          {isAdultMode && job.status !== 'completed' && (
+          {job.status === 'pending_validation' && !isAdultMode && (
+            <div className="text-center py-2 text-purple-600 text-sm font-medium">
+              ⏳ En attente de validation par tes parents
+            </div>
+          )}
+
+          {/* Actions parent : validation */}
+          {isAdultMode && job.status === 'pending_validation' && (
+            <div className="flex gap-2">
+              <Button
+                variant="success"
+                size="sm"
+                className="flex-1 flex items-center justify-center gap-1"
+                onClick={handleValidate}
+              >
+                <ThumbsUp size={15} />
+                Valider
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1 flex items-center justify-center gap-1"
+                onClick={handleReject}
+              >
+                <ThumbsDown size={15} />
+                Refuser
+              </Button>
+            </div>
+          )}
+
+          {/* Actions parent : modifier/supprimer */}
+          {isAdultMode && job.status !== 'completed' && job.status !== 'pending_validation' && (
             <div className="flex gap-2">
               <Button
                 variant="secondary"
@@ -146,7 +218,6 @@ export default function JobCard({
             </div>
           )}
 
-          {/* Bouton supprimer pour les jobs terminés */}
           {isAdultMode && job.status === 'completed' && (
             <Button
               variant="danger"
@@ -161,7 +232,32 @@ export default function JobCard({
         </div>
       </div>
 
-      {/* Modal de confirmation de complétion */}
+      {/* Modal soumission (enfant) */}
+      <Modal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        title="Soumettre pour validation"
+      >
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🙋</div>
+            <p className="text-lg mb-2">Tu as bien terminé le boulot ?</p>
+            <p className="text-gray-600 mb-4">
+              Tes parents devront valider avant que les {formatCurrency(job.reward)} soient ajoutés à ton porte-monnaie.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="success" className="flex-1" onClick={handleSubmit}>
+              Oui, j'ai fini !
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={() => setShowSubmitModal(false)}>
+              Pas encore
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal complétion legacy (sans espace parent) */}
       <Modal
         isOpen={showCompleteModal}
         onClose={() => setShowCompleteModal(false)}
@@ -170,27 +266,16 @@ export default function JobCard({
         <div className="space-y-4">
           <div className="text-center">
             <div className="text-6xl mb-4">🎉</div>
-            <p className="text-lg mb-2">
-              Tu as bien terminé le boulot ?
-            </p>
+            <p className="text-lg mb-2">Tu as bien terminé le boulot ?</p>
             <p className="text-gray-600 mb-4">
               {formatCurrency(job.reward)} seront ajoutés à ton porte-monnaie !
             </p>
           </div>
-
           <div className="flex gap-3">
-            <Button
-              variant="success"
-              className="flex-1"
-              onClick={handleComplete}
-            >
+            <Button variant="success" className="flex-1" onClick={handleComplete}>
               Oui, c'est fait !
             </Button>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => setShowCompleteModal(false)}
-            >
+            <Button variant="secondary" className="flex-1" onClick={() => setShowCompleteModal(false)}>
               Pas encore
             </Button>
           </div>

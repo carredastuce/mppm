@@ -22,7 +22,7 @@ export interface Job {
   title: string
   description: string
   reward: number
-  status: 'available' | 'in_progress' | 'completed'
+  status: 'available' | 'in_progress' | 'pending_validation' | 'completed'
   createdAt: string
   acceptedAt?: string
   completedAt?: string
@@ -69,6 +69,9 @@ export type AppAction =
   | { type: 'UPDATE_JOB'; payload: Job }
   | { type: 'DELETE_JOB'; payload: string }
   | { type: 'ACCEPT_JOB'; payload: string }
+  | { type: 'SUBMIT_JOB'; payload: string }
+  | { type: 'VALIDATE_JOB'; payload: { jobId: string; transaction: Transaction } }
+  | { type: 'REJECT_JOB'; payload: string }
   | { type: 'COMPLETE_JOB'; payload: { jobId: string; transaction: Transaction } }
   | { type: 'LOAD_STATE'; payload: AppState }
   | { type: 'RESET_STATE' }
