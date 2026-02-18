@@ -156,7 +156,7 @@ export default function Header({ onParentAccess }: HeaderProps) {
             value={inputCode}
             onChange={(e) => setInputCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
             placeholder="XXXXXX"
-            className="w-full text-center font-mono tracking-widest text-2xl font-bold border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase"
+            className="w-full text-center font-mono tracking-widest text-2xl font-bold text-gray-900 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase"
             maxLength={6}
             autoFocus
           />
