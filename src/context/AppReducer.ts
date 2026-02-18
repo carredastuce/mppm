@@ -78,11 +78,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ),
       }
 
-    case 'DELETE_JOB':
+    case 'DELETE_JOB': {
+      const jobToDelete = state.jobs.find((job) => job.id === action.payload)
       return {
         ...state,
         jobs: state.jobs.filter((job) => job.id !== action.payload),
+        transactions: jobToDelete?.transactionId
+          ? state.transactions.filter((tx) => tx.id !== jobToDelete.transactionId)
+          : state.transactions,
       }
+    }
 
     case 'ACCEPT_JOB':
       return {
@@ -111,7 +116,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         transactions: [transaction, ...state.transactions],
         jobs: state.jobs.map((job) =>
           job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
             : job
         ),
       }
@@ -135,7 +140,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         transactions: [transaction, ...state.transactions],
         jobs: state.jobs.map((job) =>
           job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
             : job
         ),
       }

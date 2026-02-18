@@ -27,6 +27,7 @@ export interface Job {
   acceptedAt?: string
   completedAt?: string
   icon?: string
+  transactionId?: string
 }
 
 export interface Allowance {
