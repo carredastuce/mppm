@@ -31,6 +31,7 @@ export default function JobCard({
 }: JobCardProps) {
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleAccept = () => onAccept(job.id)
 
@@ -53,9 +54,7 @@ export default function JobCard({
   }
 
   const handleReject = () => {
-    if (window.confirm(`Refuser le boulot "${job.title}" ? Il sera remis comme disponible.`)) {
-      onReject?.(job.id)
-    }
+    onReject?.(job.id)
   }
 
   // Legacy: used when no parent space configured
@@ -74,9 +73,12 @@ export default function JobCard({
   }
 
   const handleDelete = () => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer ce boulot "${job.title}" ?`)) {
-      onDelete(job.id)
-    }
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = () => {
+    onDelete(job.id)
+    setShowDeleteModal(false)
   }
 
   const statusConfig = {
@@ -277,6 +279,27 @@ export default function JobCard({
             </Button>
             <Button variant="secondary" className="flex-1" onClick={() => setShowCompleteModal(false)}>
               Pas encore
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal confirmation suppression */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Supprimer ce boulot"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Supprimer <strong>"{job.title}"</strong> ? Cette action est irréversible.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="danger" className="flex-1" onClick={confirmDelete}>
+              Supprimer
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+              Annuler
             </Button>
           </div>
         </div>
