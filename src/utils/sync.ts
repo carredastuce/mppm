@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { AppState, Transaction, Goal, Job } from '../types'
+import { AppState, Transaction, Goal, Job, DeletedIds } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -79,28 +79,49 @@ export function subscribeToFamily(
   }
 }
 
-// Merge par entité :
-// - jobs : remote gagne (parent est authoritative)
-// - transactions, goals : local gagne (enfant est authoritative)
-// - parentSettings : remote gagne
-function mergeById<T extends { id: string }>(local: T[], remote: T[], remoteWins: boolean): T[] {
+// Merge par entité avec gestion des suppressions via tombstones.
+// Les IDs présents dans deletedIds sont exclus du résultat final,
+// ce qui empêche un item supprimé localement de revenir depuis le cloud.
+function mergeById<T extends { id: string }>(
+  local: T[],
+  remote: T[],
+  remoteWins: boolean,
+  deletedIds: string[]
+): T[] {
+  const deletedSet = new Set(deletedIds)
   const map = new Map<string, T>()
+
   if (remoteWins) {
+    // Remote autoritaire : on part de local puis on écrase avec remote
     local.forEach((item) => map.set(item.id, item))
     remote.forEach((item) => map.set(item.id, item))
   } else {
+    // Local autoritaire : on part de remote puis on écrase avec local
     remote.forEach((item) => map.set(item.id, item))
     local.forEach((item) => map.set(item.id, item))
   }
-  return Array.from(map.values())
+
+  // Filtrer les items supprimés (tombstones)
+  return Array.from(map.values()).filter((item) => !deletedSet.has(item.id))
+}
+
+function mergeDeletedIds(local: DeletedIds | undefined, remote: DeletedIds | undefined): DeletedIds {
+  const merge = (a: string[] = [], b: string[] = []) => Array.from(new Set([...a, ...b]))
+  return {
+    transactions: merge(local?.transactions, remote?.transactions),
+    goals: merge(local?.goals, remote?.goals),
+    jobs: merge(local?.jobs, remote?.jobs),
+  }
 }
 
 export function mergeStates(local: AppState, remote: AppState): AppState {
+  const mergedDeletedIds = mergeDeletedIds(local.deletedIds, remote.deletedIds)
   return {
-    jobs: mergeById<Job>(local.jobs, remote.jobs, true),
-    transactions: mergeById<Transaction>(local.transactions, remote.transactions, false),
-    goals: mergeById<Goal>(local.goals, remote.goals, false),
+    jobs: mergeById<Job>(local.jobs, remote.jobs, true, mergedDeletedIds.jobs),
+    transactions: mergeById<Transaction>(local.transactions, remote.transactions, false, mergedDeletedIds.transactions),
+    goals: mergeById<Goal>(local.goals, remote.goals, false, mergedDeletedIds.goals),
     parentSettings: remote.parentSettings ?? local.parentSettings,
     linkedFamilyCode: local.linkedFamilyCode ?? remote.linkedFamilyCode,
+    deletedIds: mergedDeletedIds,
   }
 }
