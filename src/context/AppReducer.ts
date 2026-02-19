@@ -153,10 +153,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     }
 
+    // Bug 5 fix : préserver deletedItemIds si le payload n'en contient pas
     case 'LOAD_STATE':
       return {
         ...action.payload,
         parentSettings: action.payload.parentSettings ?? state.parentSettings,
+        deletedItemIds: action.payload.deletedItemIds ?? state.deletedItemIds ?? [],
       }
 
     case 'RESET_STATE':

@@ -1,15 +1,24 @@
 import { useEffect, useRef } from 'react'
 import { AppState } from '../types'
-import { pushStateToCloud } from '../utils/sync'
+import { pushStateToCloud, hashState } from '../utils/sync'
 
 export function useSyncToCloud(state: AppState, onStatusChange?: (pending: boolean) => void) {
   const timeoutRef = useRef<number | null>(null)
+  const lastPushedHashRef = useRef<string>('')
 
   const familyCode =
     state.parentSettings?.familyCode ?? state.linkedFamilyCode
 
   useEffect(() => {
     if (!familyCode) return
+
+    const currentHash = hashState(state)
+
+    // Bug 1 fix : ne pas re-push si l'état n'a pas changé (évite la boucle push→realtime→merge→push)
+    if (currentHash === lastPushedHashRef.current) {
+      onStatusChange?.(false)
+      return
+    }
 
     if (timeoutRef.current !== null) {
       clearTimeout(timeoutRef.current)
@@ -18,7 +27,10 @@ export function useSyncToCloud(state: AppState, onStatusChange?: (pending: boole
     onStatusChange?.(true)
 
     timeoutRef.current = window.setTimeout(async () => {
-      await pushStateToCloud(familyCode, state)
+      const success = await pushStateToCloud(familyCode, state)
+      if (success) {
+        lastPushedHashRef.current = currentHash
+      }
       onStatusChange?.(false)
     }, 1000)
 
