@@ -54,6 +54,7 @@ export interface AppState {
   jobs: Job[]
   parentSettings?: ParentSettings
   linkedFamilyCode?: string
+  deletedItemIds?: string[]
 }
 
 export type TransactionType = 'income' | 'expense'

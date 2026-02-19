@@ -96,11 +96,18 @@ function mergeById<T extends { id: string }>(local: T[], remote: T[], remoteWins
 }
 
 export function mergeStates(local: AppState, remote: AppState): AppState {
+  // Combiner les IDs supprimés des deux côtés pour propager les suppressions
+  const allDeletedIds = new Set([
+    ...(local.deletedItemIds || []),
+    ...(remote.deletedItemIds || []),
+  ])
+
   return {
-    jobs: mergeById<Job>(local.jobs, remote.jobs, true),
-    transactions: mergeById<Transaction>(local.transactions, remote.transactions, false),
-    goals: mergeById<Goal>(local.goals, remote.goals, false),
+    jobs: mergeById<Job>(local.jobs, remote.jobs, true).filter((j) => !allDeletedIds.has(j.id)),
+    transactions: mergeById<Transaction>(local.transactions, remote.transactions, false).filter((t) => !allDeletedIds.has(t.id)),
+    goals: mergeById<Goal>(local.goals, remote.goals, false).filter((g) => !allDeletedIds.has(g.id)),
     parentSettings: remote.parentSettings ?? local.parentSettings,
     linkedFamilyCode: local.linkedFamilyCode ?? remote.linkedFamilyCode,
+    deletedItemIds: Array.from(allDeletedIds),
   }
 }

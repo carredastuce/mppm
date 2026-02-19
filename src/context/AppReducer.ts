@@ -28,6 +28,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: state.transactions.filter((tx) => tx.id !== action.payload),
+        deletedItemIds: [...(state.deletedItemIds || []), action.payload],
       }
 
     case 'ADD_GOAL':
@@ -48,6 +49,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         goals: state.goals.filter((goal) => goal.id !== action.payload),
+        deletedItemIds: [...(state.deletedItemIds || []), action.payload],
       }
 
     case 'ADD_TO_GOAL': {
@@ -80,12 +82,17 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'DELETE_JOB': {
       const jobToDelete = state.jobs.find((job) => job.id === action.payload)
+      const deletedIds = [action.payload]
+      if (jobToDelete?.transactionId) {
+        deletedIds.push(jobToDelete.transactionId)
+      }
       return {
         ...state,
         jobs: state.jobs.filter((job) => job.id !== action.payload),
         transactions: jobToDelete?.transactionId
           ? state.transactions.filter((tx) => tx.id !== jobToDelete.transactionId)
           : state.transactions,
+        deletedItemIds: [...(state.deletedItemIds || []), ...deletedIds],
       }
     }
 
@@ -159,6 +166,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...initialState,
         parentSettings: state.parentSettings,
+        deletedItemIds: [
+          ...(state.deletedItemIds || []),
+          ...state.transactions.map((tx) => tx.id),
+          ...state.goals.map((g) => g.id),
+          ...state.jobs.map((j) => j.id),
+        ],
       }
 
     case 'SET_PARENT_SETTINGS':

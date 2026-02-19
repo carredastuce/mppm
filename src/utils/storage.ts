@@ -22,6 +22,7 @@ export function loadFromLocalStorage(): AppState | null {
         jobs: data.jobs || [],
         parentSettings: data.parentSettings,
         linkedFamilyCode: data.linkedFamilyCode,
+        deletedItemIds: data.deletedItemIds || [],
       }
     }
   } catch (error) {
