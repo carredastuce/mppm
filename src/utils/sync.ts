@@ -40,7 +40,7 @@ export function hashState(state: AppState): string {
   const significant = {
     t: state.transactions.map((t) => t.id).sort(),
     g: state.goals.map((g) => `${g.id}:${g.currentAmount}`).sort(),
-    j: state.jobs.map((j) => `${j.id}:${j.status}`).sort(),
+    j: state.jobs.map((j) => `${j.id}:${j.status}:${j.frequency || 'once'}`).sort(),
     d: [...(state.deletedItemIds || [])].sort(),
     ps: state.parentSettings ? {
       cn: state.parentSettings.childName,

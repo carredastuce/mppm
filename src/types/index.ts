@@ -17,6 +17,8 @@ export interface Goal {
   imageUrl?: string
 }
 
+export type JobFrequency = 'once' | 'daily' | 'weekly' | 'specific_day' | 'monthly'
+
 export interface Job {
   id: string
   title: string
@@ -28,6 +30,8 @@ export interface Job {
   completedAt?: string
   icon?: string
   transactionId?: string
+  frequency?: JobFrequency
+  frequencyDay?: number // 0-6 (dimanche-samedi) pour 'specific_day'
 }
 
 export interface Allowance {

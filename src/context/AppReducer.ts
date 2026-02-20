@@ -121,11 +121,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: [transaction, ...state.transactions],
-        jobs: state.jobs.map((job) =>
-          job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
-            : job
-        ),
+        jobs: state.jobs.map((job) => {
+          if (job.id !== jobId) return job
+          const isRecurring = job.frequency && job.frequency !== 'once'
+          if (isRecurring) {
+            return { ...job, status: 'available', acceptedAt: undefined, completedAt: undefined, transactionId: undefined }
+          }
+          return { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
+        }),
       }
     }
 
@@ -145,11 +148,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: [transaction, ...state.transactions],
-        jobs: state.jobs.map((job) =>
-          job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
-            : job
-        ),
+        jobs: state.jobs.map((job) => {
+          if (job.id !== jobId) return job
+          const isRecurring = job.frequency && job.frequency !== 'once'
+          if (isRecurring) {
+            return { ...job, status: 'available', acceptedAt: undefined, completedAt: undefined, transactionId: undefined }
+          }
+          return { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
+        }),
       }
     }
 
