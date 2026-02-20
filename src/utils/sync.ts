@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { AppState, Transaction, Goal, Job, ParentSettings } from '../types'
+import { AppState, Transaction, Goal, Job, ParentSettings, DeletedIds } from '../types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -41,7 +41,9 @@ export function hashState(state: AppState): string {
     t: state.transactions.map((t) => t.id).sort(),
     g: state.goals.map((g) => `${g.id}:${g.currentAmount}`).sort(),
     j: state.jobs.map((j) => `${j.id}:${j.status}:${j.frequency || 'once'}`).sort(),
-    d: [...(state.deletedItemIds || [])].sort(),
+    dt: [...(state.deletedIds?.transactions || [])].sort(),
+    dg: [...(state.deletedIds?.goals || [])].sort(),
+    dj: [...(state.deletedIds?.jobs || [])].sort(),
     ps: state.parentSettings ? {
       cn: state.parentSettings.childName,
       sw: state.parentSettings.spendingWarningThreshold,
@@ -154,62 +156,77 @@ export function subscribeToFamily(
   }
 }
 
-// Merge par entité :
-// - jobs : remote gagne (parent est authoritative)
-// - transactions, goals : local gagne (enfant est authoritative)
-// - parentSettings : remote gagne
-function mergeById<T extends { id: string }>(local: T[], remote: T[], remoteWins: boolean): T[] {
+// Merge par entité avec gestion des suppressions via tombstones.
+// Les IDs présents dans deletedIds sont exclus du résultat final,
+// ce qui empêche un item supprimé localement de revenir depuis le cloud.
+function mergeById<T extends { id: string }>(
+  local: T[],
+  remote: T[],
+  remoteWins: boolean,
+  deletedIds: string[]
+): T[] {
+  const deletedSet = new Set(deletedIds)
   const map = new Map<string, T>()
+
   if (remoteWins) {
+    // Remote autoritaire : on part de local puis on écrase avec remote
     local.forEach((item) => map.set(item.id, item))
     remote.forEach((item) => map.set(item.id, item))
   } else {
+    // Local autoritaire : on part de remote puis on écrase avec local
     remote.forEach((item) => map.set(item.id, item))
     local.forEach((item) => map.set(item.id, item))
   }
-  return Array.from(map.values())
+
+  // Filtrer les items supprimés (tombstones)
+  return Array.from(map.values()).filter((item) => !deletedSet.has(item.id))
 }
 
-// Bug 7 fix : purge les deletedItemIds qui ne correspondent à aucun élément existant
-// (s'ils ne bloquent plus rien, ils sont inutiles)
-const MAX_DELETED_IDS = 500
+function mergeDeletedIds(local: DeletedIds | undefined, remote: DeletedIds | undefined): DeletedIds {
+  const merge = (a: string[] = [], b: string[] = []) => Array.from(new Set([...a, ...b]))
+  return {
+    transactions: merge(local?.transactions, remote?.transactions),
+    goals: merge(local?.goals, remote?.goals),
+    jobs: merge(local?.jobs, remote?.jobs),
+  }
+}
 
-function purgeDeletedIds(allDeletedIds: Set<string>, existingIds: Set<string>): string[] {
-  const relevant = new Set<string>()
-  for (const id of allDeletedIds) {
+// Bug 7 fix : purge les deleted IDs qui ne correspondent à aucun élément existant
+// Garde les IDs récents pour la propagation cross-device, mais limite la taille
+const MAX_DELETED_PER_LIST = 200
+
+function purgeDeletedList(deletedIds: string[], existingIds: Set<string>): string[] {
+  // Garder les IDs qui bloquent encore un élément existant
+  const relevant: string[] = []
+  const rest: string[] = []
+  for (const id of deletedIds) {
     if (existingIds.has(id)) {
-      relevant.add(id)
+      relevant.push(id)
+    } else {
+      rest.push(id)
     }
   }
-  // Garder aussi les IDs récents même s'ils ne matchent rien (pour la propagation cross-device)
-  // mais limiter la taille totale
-  const allIds = Array.from(allDeletedIds)
-  if (relevant.size < MAX_DELETED_IDS) {
-    const remaining = MAX_DELETED_IDS - relevant.size
-    for (const id of allIds.slice(-remaining)) {
-      relevant.add(id)
-    }
+  // Garder aussi les IDs récents pour la propagation cross-device
+  const remaining = MAX_DELETED_PER_LIST - relevant.length
+  if (remaining > 0) {
+    relevant.push(...rest.slice(-remaining))
   }
-  return Array.from(relevant)
+  return relevant
 }
 
 export function mergeStates(local: AppState, remote: AppState): AppState {
-  // Combiner les IDs supprimés des deux côtés pour propager les suppressions
-  const allDeletedIds = new Set([
-    ...(local.deletedItemIds || []),
-    ...(remote.deletedItemIds || []),
-  ])
+  const mergedDeletedIds = mergeDeletedIds(local.deletedIds, remote.deletedIds)
 
-  const mergedJobs = mergeById<Job>(local.jobs, remote.jobs, true).filter((j) => !allDeletedIds.has(j.id))
-  const mergedTransactions = mergeById<Transaction>(local.transactions, remote.transactions, false).filter((t) => !allDeletedIds.has(t.id))
-  const mergedGoals = mergeById<Goal>(local.goals, remote.goals, false).filter((g) => !allDeletedIds.has(g.id))
+  const mergedJobs = mergeById<Job>(local.jobs, remote.jobs, true, mergedDeletedIds.jobs)
+  const mergedTransactions = mergeById<Transaction>(local.transactions, remote.transactions, false, mergedDeletedIds.transactions)
+  const mergedGoals = mergeById<Goal>(local.goals, remote.goals, false, mergedDeletedIds.goals)
 
   // Bug 7 : purger les IDs de suppression qui ne servent plus
-  const existingIds = new Set([
-    ...mergedJobs.map((j) => j.id),
-    ...mergedTransactions.map((t) => t.id),
-    ...mergedGoals.map((g) => g.id),
-  ])
+  const purgedDeletedIds: DeletedIds = {
+    transactions: purgeDeletedList(mergedDeletedIds.transactions, new Set(mergedTransactions.map((t) => t.id))),
+    goals: purgeDeletedList(mergedDeletedIds.goals, new Set(mergedGoals.map((g) => g.id))),
+    jobs: purgeDeletedList(mergedDeletedIds.jobs, new Set(mergedJobs.map((j) => j.id))),
+  }
 
   // Amél 3 : préserver le pinHash local (il n'est pas dans le remote cloud)
   const mergedParentSettings = remote.parentSettings || local.parentSettings
@@ -226,6 +243,6 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     goals: mergedGoals,
     parentSettings: mergedParentSettings,
     linkedFamilyCode: local.linkedFamilyCode ?? remote.linkedFamilyCode,
-    deletedItemIds: purgeDeletedIds(allDeletedIds, existingIds),
+    deletedIds: purgedDeletedIds,
   }
 }

@@ -156,7 +156,7 @@ export default function ParentSettings() {
           goals: mergeById(state.goals, importedData.goals),
           jobs: mergeById(state.jobs, importedData.jobs || []),
           parentSettings: state.parentSettings,
-          deletedItemIds: state.deletedItemIds,
+          deletedIds: state.deletedIds,
         }
         dispatch({ type: 'LOAD_STATE', payload: mergedState })
       }

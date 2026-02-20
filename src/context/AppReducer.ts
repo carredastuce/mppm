@@ -1,11 +1,25 @@
-import { AppState, AppAction } from '../types'
+import { AppState, AppAction, DeletedIds } from '../types'
 import { mergeStates } from '../utils/sync'
+
+function emptyDeletedIds(): DeletedIds {
+  return { transactions: [], goals: [], jobs: [] }
+}
+
+function addToDeleted(
+  deletedIds: DeletedIds | undefined,
+  field: keyof DeletedIds,
+  id: string
+): DeletedIds {
+  const current = deletedIds ?? emptyDeletedIds()
+  return { ...current, [field]: [...current[field], id] }
+}
 
 export const initialState: AppState = {
   transactions: [],
   goals: [],
   jobs: [],
   parentSettings: undefined,
+  deletedIds: emptyDeletedIds(),
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -28,7 +42,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: state.transactions.filter((tx) => tx.id !== action.payload),
-        deletedItemIds: [...(state.deletedItemIds || []), action.payload],
+        deletedIds: addToDeleted(state.deletedIds, 'transactions', action.payload),
       }
 
     case 'ADD_GOAL':
@@ -49,7 +63,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         goals: state.goals.filter((goal) => goal.id !== action.payload),
-        deletedItemIds: [...(state.deletedItemIds || []), action.payload],
+        deletedIds: addToDeleted(state.deletedIds, 'goals', action.payload),
       }
 
     case 'ADD_TO_GOAL': {
@@ -82,9 +96,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'DELETE_JOB': {
       const jobToDelete = state.jobs.find((job) => job.id === action.payload)
-      const deletedIds = [action.payload]
+      let newDeletedIds = addToDeleted(state.deletedIds, 'jobs', action.payload)
       if (jobToDelete?.transactionId) {
-        deletedIds.push(jobToDelete.transactionId)
+        newDeletedIds = addToDeleted(newDeletedIds, 'transactions', jobToDelete.transactionId)
       }
       return {
         ...state,
@@ -92,7 +106,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         transactions: jobToDelete?.transactionId
           ? state.transactions.filter((tx) => tx.id !== jobToDelete.transactionId)
           : state.transactions,
-        deletedItemIds: [...(state.deletedItemIds || []), ...deletedIds],
+        deletedIds: newDeletedIds,
       }
     }
 
@@ -159,12 +173,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     }
 
-    // Bug 5 fix : préserver deletedItemIds si le payload n'en contient pas
+    // Bug 5 fix : préserver deletedIds si le payload n'en contient pas
     case 'LOAD_STATE':
       return {
         ...action.payload,
         parentSettings: action.payload.parentSettings ?? state.parentSettings,
-        deletedItemIds: action.payload.deletedItemIds ?? state.deletedItemIds ?? [],
+        deletedIds: action.payload.deletedIds ?? state.deletedIds ?? emptyDeletedIds(),
       }
 
     case 'RESET_STATE':
@@ -174,12 +188,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...initialState,
         parentSettings: state.parentSettings,
-        deletedItemIds: [
-          ...(state.deletedItemIds || []),
-          ...state.transactions.map((tx) => tx.id),
-          ...state.goals.map((g) => g.id),
-          ...state.jobs.map((j) => j.id),
-        ],
+        deletedIds: {
+          transactions: [
+            ...(state.deletedIds?.transactions ?? []),
+            ...state.transactions.map((tx) => tx.id),
+          ],
+          goals: [
+            ...(state.deletedIds?.goals ?? []),
+            ...state.goals.map((g) => g.id),
+          ],
+          jobs: [
+            ...(state.deletedIds?.jobs ?? []),
+            ...state.jobs.map((j) => j.id),
+          ],
+        },
       }
 
     case 'SET_PARENT_SETTINGS':

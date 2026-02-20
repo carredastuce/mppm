@@ -22,7 +22,8 @@ export function loadFromLocalStorage(): AppState | null {
         jobs: data.jobs || [],
         parentSettings: data.parentSettings,
         linkedFamilyCode: data.linkedFamilyCode,
-        deletedItemIds: data.deletedItemIds || [],
+        // Migration : anciennes versions n'ont pas deletedIds
+        deletedIds: data.deletedIds ?? { transactions: [], goals: [], jobs: [] },
       }
     }
   } catch (error) {
