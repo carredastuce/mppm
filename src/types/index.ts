@@ -52,7 +52,12 @@ export interface ParentSettings {
   familyCode?: string
 }
 
-export type ChildTab = 'dashboard' | 'transactions' | 'goals' | 'jobs' | 'simulator'
+export type ChildTab = 'dashboard' | 'transactions' | 'goals' | 'jobs' | 'simulator' | 'badges'
+
+export interface UnlockedBadge {
+  id: string
+  unlockedAt: string
+}
 
 export type ParentTab = 'dashboard' | 'allowance' | 'jobs' | 'history' | 'settings'
 
@@ -69,6 +74,7 @@ export interface AppState {
   parentSettings?: ParentSettings
   linkedFamilyCode?: string
   deletedIds?: DeletedIds
+  unlockedBadges?: UnlockedBadge[]
 }
 
 export type TransactionType = 'income' | 'expense'
@@ -96,3 +102,4 @@ export type AppAction =
   | { type: 'UPDATE_PARENT_SETTINGS'; payload: Partial<ParentSettings> }
   | { type: 'SYNC_STATE'; payload: AppState }
   | { type: 'SET_FAMILY_CODE'; payload: string }
+  | { type: 'UNLOCK_BADGE'; payload: UnlockedBadge }

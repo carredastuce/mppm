@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus, Users, User } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Job, Transaction } from '../../types'
@@ -16,10 +16,16 @@ export default function JobsList() {
   const hasParentSpace = !!state.parentSettings?.pinHash
   const [isAdultMode, setIsAdultMode] = useState(false)
 
-  const availableJobs = state.jobs.filter(job => job.status === 'available')
-  const inProgressJobs = state.jobs.filter(job => job.status === 'in_progress')
-  const pendingJobs = state.jobs.filter(job => job.status === 'pending_validation')
-  const completedJobs = state.jobs.filter(job => job.status === 'completed')
+  const { availableJobs, inProgressJobs, pendingJobs, completedJobs } = useMemo(() => {
+    const available: Job[] = [], inProgress: Job[] = [], pending: Job[] = [], completed: Job[] = []
+    for (const job of state.jobs) {
+      if (job.status === 'available') available.push(job)
+      else if (job.status === 'in_progress') inProgress.push(job)
+      else if (job.status === 'pending_validation') pending.push(job)
+      else if (job.status === 'completed') completed.push(job)
+    }
+    return { availableJobs: available, inProgressJobs: inProgress, pendingJobs: pending, completedJobs: completed }
+  }, [state.jobs])
 
   const handleSubmit = (job: Job) => {
     if (editingJob) {

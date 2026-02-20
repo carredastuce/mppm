@@ -1,5 +1,54 @@
 import { createClient } from '@supabase/supabase-js'
-import { AppState, Transaction, Goal, Job, ParentSettings, DeletedIds } from '../types'
+import { AppState, Transaction, Goal, Job, ParentSettings, DeletedIds, UnlockedBadge } from '../types'
+
+const VALID_JOB_STATUSES = ['available', 'in_progress', 'pending_validation', 'completed'] as const
+
+export function validateAppState(state: unknown): AppState {
+  if (typeof state !== 'object' || state === null) {
+    throw new Error('Invalid state: not an object')
+  }
+
+  const s = state as Record<string, unknown>
+
+  // Validate transactions
+  if (!Array.isArray(s.transactions)) {
+    throw new Error('Invalid state: transactions is not an array')
+  }
+  for (const t of s.transactions) {
+    if (typeof t !== 'object' || t === null) throw new Error('Invalid transaction: not an object')
+    const tx = t as Record<string, unknown>
+    if (typeof tx.id !== 'string') throw new Error('Invalid transaction: missing id')
+    if (tx.type !== 'income' && tx.type !== 'expense') throw new Error('Invalid transaction: bad type')
+    if (typeof tx.amount !== 'number' || tx.amount <= 0 || tx.amount > 1_000_000) throw new Error('Invalid transaction: bad amount')
+    if (typeof tx.label !== 'string' || tx.label.length < 1 || tx.label.length > 100) throw new Error('Invalid transaction: bad label')
+  }
+
+  // Validate goals
+  if (!Array.isArray(s.goals)) {
+    throw new Error('Invalid state: goals is not an array')
+  }
+  for (const g of s.goals) {
+    if (typeof g !== 'object' || g === null) throw new Error('Invalid goal: not an object')
+    const goal = g as Record<string, unknown>
+    if (typeof goal.id !== 'string') throw new Error('Invalid goal: missing id')
+    if (typeof goal.targetAmount !== 'number' || goal.targetAmount < 0 || goal.targetAmount > 1_000_000) throw new Error('Invalid goal: bad targetAmount')
+    if (typeof goal.currentAmount !== 'number' || goal.currentAmount < 0) throw new Error('Invalid goal: bad currentAmount')
+  }
+
+  // Validate jobs
+  if (!Array.isArray(s.jobs)) {
+    throw new Error('Invalid state: jobs is not an array')
+  }
+  for (const j of s.jobs) {
+    if (typeof j !== 'object' || j === null) throw new Error('Invalid job: not an object')
+    const job = j as Record<string, unknown>
+    if (typeof job.id !== 'string') throw new Error('Invalid job: missing id')
+    if (typeof job.reward !== 'number' || job.reward <= 0 || job.reward > 1_000_000) throw new Error('Invalid job: bad reward')
+    if (typeof job.status !== 'string' || !(VALID_JOB_STATUSES as readonly string[]).includes(job.status)) throw new Error('Invalid job: bad status')
+  }
+
+  return state as AppState
+}
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -111,7 +160,7 @@ export async function pullStateFromCloud(code: string): Promise<AppState | null>
       .eq('family_code', code)
       .single()
     if (error || !data) return null
-    return data.state as AppState
+    return validateAppState(data.state)
   } catch (err) {
     console.warn('[sync] pull failed:', err)
     return null
@@ -146,7 +195,14 @@ export function subscribeToFamily(
       },
       (payload) => {
         const newState = (payload.new as { state: AppState })?.state
-        if (newState) onUpdate(newState)
+        if (newState) {
+          try {
+            const validated = validateAppState(newState)
+            onUpdate(validated)
+          } catch (err) {
+            console.warn('[sync] invalid state received via subscription, ignoring:', err)
+          }
+        }
       }
     )
     .subscribe()
@@ -237,6 +293,14 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       }
     : undefined
 
+  // Merge unlockedBadges by union (never lose a badge)
+  const badgeMap = new Map<string, UnlockedBadge>()
+  for (const b of (local.unlockedBadges ?? [])) badgeMap.set(b.id, b)
+  for (const b of (remote.unlockedBadges ?? [])) {
+    if (!badgeMap.has(b.id)) badgeMap.set(b.id, b)
+  }
+  const mergedUnlockedBadges = Array.from(badgeMap.values())
+
   return {
     jobs: mergedJobs,
     transactions: mergedTransactions,
@@ -244,5 +308,6 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     parentSettings: mergedParentSettings,
     linkedFamilyCode: local.linkedFamilyCode ?? remote.linkedFamilyCode,
     deletedIds: purgedDeletedIds,
+    unlockedBadges: mergedUnlockedBadges,
   }
 }

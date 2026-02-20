@@ -20,6 +20,7 @@ export const initialState: AppState = {
   jobs: [],
   parentSettings: undefined,
   deletedIds: emptyDeletedIds(),
+  unlockedBadges: [],
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -173,12 +174,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     }
 
+    case 'UNLOCK_BADGE': {
+      const already = (state.unlockedBadges ?? []).some((b) => b.id === action.payload.id)
+      if (already) return state
+      return { ...state, unlockedBadges: [...(state.unlockedBadges ?? []), action.payload] }
+    }
+
     // Bug 5 fix : préserver deletedIds si le payload n'en contient pas
     case 'LOAD_STATE':
       return {
         ...action.payload,
         parentSettings: action.payload.parentSettings ?? state.parentSettings,
         deletedIds: action.payload.deletedIds ?? state.deletedIds ?? emptyDeletedIds(),
+        unlockedBadges: action.payload.unlockedBadges ?? state.unlockedBadges ?? [],
       }
 
     case 'RESET_STATE':

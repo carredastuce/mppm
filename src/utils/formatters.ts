@@ -50,3 +50,17 @@ export function getTransactionPeriod(dateString: string): string {
 
   return 'Plus ancien'
 }
+
+export function toDay(dateStr: string): string {
+  return new Date(dateStr).toISOString().slice(0, 10)
+}
+
+export function isoWeek(dateStr: string): string {
+  const d = new Date(dateStr)
+  const jan4 = new Date(d.getFullYear(), 0, 4)
+  const startOfWeek1 = new Date(jan4)
+  startOfWeek1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7))
+  const diff = d.getTime() - startOfWeek1.getTime()
+  const week = Math.floor(diff / (7 * 24 * 3600 * 1000)) + 1
+  return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`
+}

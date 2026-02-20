@@ -7,6 +7,8 @@ import { useSyncToCloud } from '../hooks/useSyncToCloud'
 import { loadFromLocalStorage } from '../utils/storage'
 import { calculateDueAllowances } from '../utils/allowance'
 import { pullStateFromCloud, subscribeToFamily, hashState } from '../utils/sync'
+import { useBadgeChecker } from '../hooks/useBadgeChecker'
+import { BadgeDefinition } from '../utils/badges'
 
 interface AppContextType {
   state: AppState
@@ -14,6 +16,8 @@ interface AppContextType {
   syncPending: boolean
   canUndo: boolean
   undo: () => void
+  badgeQueue: BadgeDefinition[]
+  dismissBadge: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -153,8 +157,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Effet 3 : Push vers Supabase (debounce 1000ms)
   useSyncToCloud(state, setSyncPending)
 
+  // Badge checker
+  const { badgeQueue, dismissFirst: dismissBadge } = useBadgeChecker(state, dispatch)
+
   return (
-    <AppContext.Provider value={{ state, dispatch: dispatchWithHistory, syncPending, canUndo, undo }}>
+    <AppContext.Provider value={{ state, dispatch: dispatchWithHistory, syncPending, canUndo, undo, badgeQueue, dismissBadge }}>
       {children}
     </AppContext.Provider>
   )

@@ -11,11 +11,13 @@ import JobsList from './components/jobs/JobsList'
 import Simulator from './components/simulator/Simulator'
 import ParentLayout from './components/parent/ParentLayout'
 import PinModal from './components/parent/PinModal'
+import BadgeGallery from './components/badges/BadgeGallery'
+import BadgeUnlockedToast from './components/badges/BadgeUnlockedToast'
 import { ChildTab, ParentTab } from './types'
 import { hashPin, verifyPin } from './utils/pin'
 
 function AppContent() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, badgeQueue, dismissBadge } = useApp()
   const [activeTab, setActiveTab] = useState<ChildTab>('dashboard')
   const [isParentMode, setIsParentMode] = useState(false)
   const [parentTab, setParentTab] = useState<ParentTab>('dashboard')
@@ -77,10 +79,12 @@ function AppContent() {
             {activeTab === 'goals' && <GoalsList />}
             {activeTab === 'jobs' && <JobsList />}
             {activeTab === 'simulator' && <Simulator />}
+            {activeTab === 'badges' && <BadgeGallery />}
           </main>
         </>
       )}
 
+      <BadgeUnlockedToast badge={badgeQueue[0]} onDismiss={dismissBadge} />
       <UndoToast />
 
       <PinModal

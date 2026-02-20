@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
 import { calculateBalance, calculateSpendingThisMonth, calculateIncomeThisMonth, calculateSpendingThisWeek, calculateIncomeThisWeek, calculateCategoryBreakdown } from '../../utils/calculations'
 import { formatCurrency } from '../../utils/formatters'
@@ -13,19 +14,30 @@ interface ParentDashboardProps {
 
 export default function ParentDashboard({ onNavigate }: ParentDashboardProps) {
   const { state } = useApp()
-  const balance = calculateBalance(state.transactions)
-  const incomeMonth = calculateIncomeThisMonth(state.transactions)
-  const spendingMonth = calculateSpendingThisMonth(state.transactions)
-  const incomeWeek = calculateIncomeThisWeek(state.transactions)
-  const spendingWeek = calculateSpendingThisWeek(state.transactions)
-  const topExpenses = calculateCategoryBreakdown(state.transactions, 'expense')
 
-  const availableJobs = state.jobs.filter(j => j.status === 'available').length
-  const inProgressJobs = state.jobs.filter(j => j.status === 'in_progress').length
-  const completedJobs = state.jobs.filter(j => j.status === 'completed').length
-  const totalEarnedFromJobs = state.jobs
-    .filter(j => j.status === 'completed')
-    .reduce((sum, j) => sum + j.reward, 0)
+  const { balance, incomeMonth, spendingMonth, incomeWeek, spendingWeek, topExpenses } = useMemo(() => {
+    const bal = calculateBalance(state.transactions)
+    const incM = calculateIncomeThisMonth(state.transactions)
+    const spM = calculateSpendingThisMonth(state.transactions)
+    const incW = calculateIncomeThisWeek(state.transactions)
+    const spW = calculateSpendingThisWeek(state.transactions)
+    const top = calculateCategoryBreakdown(state.transactions, 'expense')
+    return { balance: bal, incomeMonth: incM, spendingMonth: spM, incomeWeek: incW, spendingWeek: spW, topExpenses: top }
+  }, [state.transactions])
+
+  const jobStats = useMemo(() => {
+    const stats = { available: 0, inProgress: 0, completed: 0, pendingValidation: 0, totalEarned: 0 }
+    for (const job of state.jobs) {
+      if (job.status === 'available') stats.available++
+      else if (job.status === 'in_progress') stats.inProgress++
+      else if (job.status === 'pending_validation') stats.pendingValidation++
+      else if (job.status === 'completed') {
+        stats.completed++
+        stats.totalEarned += job.reward
+      }
+    }
+    return stats
+  }, [state.jobs])
 
   return (
     <div className="space-y-6">
@@ -136,19 +148,19 @@ export default function ParentDashboard({ onNavigate }: ParentDashboardProps) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-green-50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-green-600">{availableJobs}</p>
+              <p className="text-2xl font-bold text-green-600">{jobStats.available}</p>
               <p className="text-xs text-green-700">Disponibles</p>
             </div>
             <div className="bg-amber-50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-amber-600">{inProgressJobs}</p>
+              <p className="text-2xl font-bold text-amber-600">{jobStats.inProgress}</p>
               <p className="text-xs text-amber-700">En cours</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-gray-600">{completedJobs}</p>
+              <p className="text-2xl font-bold text-gray-600">{jobStats.completed}</p>
               <p className="text-xs text-gray-700">Terminés</p>
             </div>
             <div className="bg-indigo-50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-indigo-600">{formatCurrency(totalEarnedFromJobs)}</p>
+              <p className="text-2xl font-bold text-indigo-600">{formatCurrency(jobStats.totalEarned)}</p>
               <p className="text-xs text-indigo-700">Total gagné</p>
             </div>
           </div>

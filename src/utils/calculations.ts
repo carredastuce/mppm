@@ -56,3 +56,9 @@ export function calculateCategoryBreakdown(
     .map(([category, amount]) => ({ category, amount }))
     .sort((a, b) => b.amount - a.amount)
 }
+
+export function calculateTotalIncome(transactions: Transaction[]): number {
+  return transactions
+    .filter(tx => tx.type === 'income')
+    .reduce((acc, tx) => acc + tx.amount, 0)
+}

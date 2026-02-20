@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Transaction, Goal, ChildTab } from '../../types'
@@ -20,7 +20,7 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { state, dispatch } = useApp()
-  const balance = calculateBalance(state.transactions)
+  const balance = useMemo(() => calculateBalance(state.transactions), [state.transactions])
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>()
 

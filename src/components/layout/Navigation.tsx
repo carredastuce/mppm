@@ -1,5 +1,6 @@
-import { Home, List, Target, Briefcase, Calculator } from 'lucide-react'
+import { Home, List, Target, Briefcase, Calculator, Trophy } from 'lucide-react'
 import { ChildTab } from '../../types'
+import { useApp } from '../../context/AppContext'
 
 interface NavigationProps {
   activeTab: ChildTab
@@ -7,12 +8,17 @@ interface NavigationProps {
 }
 
 export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
+  const { state } = useApp()
+  const unlockedCount = (state.unlockedBadges ?? []).length
+  const hasNew = unlockedCount > 0 && activeTab !== 'badges'
+
   const tabs = [
     { id: 'dashboard' as const, label: 'Accueil', icon: Home },
     { id: 'transactions' as const, label: 'Transactions', icon: List },
     { id: 'goals' as const, label: 'Objectifs', icon: Target },
     { id: 'jobs' as const, label: 'Boulots', icon: Briefcase },
     { id: 'simulator' as const, label: 'Simulateur', icon: Calculator },
+    { id: 'badges' as const, label: 'Badges', icon: Trophy },
   ]
 
   return (
@@ -22,6 +28,8 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
+
+            const showBadge = tab.id === 'badges' && hasNew
 
             return (
               <button
@@ -33,7 +41,12 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
                     : 'text-gray-500 border-transparent hover:text-primary hover:bg-gray-50'
                 }`}
               >
-                <Icon size={22} />
+                <span className="relative">
+                  <Icon size={22} />
+                  {showBadge && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </span>
                 <span>{tab.label}</span>
               </button>
             )
