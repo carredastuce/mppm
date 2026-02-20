@@ -118,7 +118,7 @@ export default function JobCard({
   }
 
   const config = statusConfig[job.status]
-  const hasParentValidation = !!(onSubmit || onValidate)
+  const hasParentValidation = !!(onSubmit || onValidate) && job.requiresValidation !== false
   const frequencyLabel = getFrequencyLabel(job)
 
   return (

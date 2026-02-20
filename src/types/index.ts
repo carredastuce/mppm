@@ -32,6 +32,7 @@ export interface Job {
   transactionId?: string
   frequency?: JobFrequency
   frequencyDay?: number // 0-6 (dimanche-samedi) pour 'specific_day'
+  requiresValidation?: boolean // true par défaut : l'enfant soumet, le parent valide
 }
 
 export interface Allowance {

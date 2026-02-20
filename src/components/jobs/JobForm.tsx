@@ -31,6 +31,7 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
   const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || '🧹')
   const [frequency, setFrequency] = useState<JobFrequency>(initialData?.frequency || 'once')
   const [frequencyDay, setFrequencyDay] = useState<number>(initialData?.frequencyDay ?? 1)
+  const [requiresValidation, setRequiresValidation] = useState<boolean>(initialData?.requiresValidation !== false)
   const [errors, setErrors] = useState<Record<string, string | null>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,6 +64,7 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
       icon: selectedIcon,
       frequency,
       frequencyDay: frequency === 'specific_day' ? frequencyDay : undefined,
+      requiresValidation,
     }
 
     onSubmit(job)
@@ -180,6 +182,31 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
             </div>
           </div>
         )}
+      </div>
+
+      {/* Validation parentale */}
+      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div>
+          <p className="text-sm font-semibold text-gray-700">Validation parentale</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {requiresValidation
+              ? 'L\'enfant soumet, le parent valide avant le paiement'
+              : 'L\'enfant marque directement comme terminé'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRequiresValidation(!requiresValidation)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+            requiresValidation ? 'bg-primary' : 'bg-gray-300'
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+              requiresValidation ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
       </div>
 
       {/* Actions */}
