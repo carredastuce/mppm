@@ -1,10 +1,23 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { CheckCircle, Clock, Trash2, Edit, Star, Hourglass, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { CheckCircle, Clock, Trash2, Edit, Star, Hourglass, ThumbsUp, ThumbsDown, Repeat } from 'lucide-react'
 import { Job, Transaction } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
 import Modal from '../shared/Modal'
 import Button from '../shared/Button'
+
+const DAY_NAMES_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+
+function getFrequencyLabel(job: Job): string | null {
+  if (!job.frequency || job.frequency === 'once') return null
+  switch (job.frequency) {
+    case 'daily': return 'Tous les jours'
+    case 'weekly': return 'Toutes les semaines'
+    case 'specific_day': return `Chaque ${DAY_NAMES_SHORT[job.frequencyDay ?? 1]}.`
+    case 'monthly': return 'Tous les mois'
+    default: return null
+  }
+}
 
 interface JobCardProps {
   job: Job
@@ -106,15 +119,24 @@ export default function JobCard({
 
   const config = statusConfig[job.status]
   const hasParentValidation = !!(onSubmit || onValidate)
+  const frequencyLabel = getFrequencyLabel(job)
 
   return (
     <>
       <div className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 border-2 ${job.status === 'pending_validation' ? 'border-purple-300' : 'border-gray-100'}`}>
-        {/* Badge statut */}
+        {/* Badge statut + fréquence */}
         <div className="flex items-center justify-between mb-3">
-          <div className={`${config.color} text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}>
-            {config.icon}
-            {config.label}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className={`${config.color} text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}>
+              {config.icon}
+              {config.label}
+            </div>
+            {frequencyLabel && (
+              <div className="bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                <Repeat size={12} />
+                {frequencyLabel}
+              </div>
+            )}
           </div>
           <div className="text-2xl font-bold text-success">
             {formatCurrency(job.reward)}

@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { Job } from '../../types'
+import { Job, JobFrequency } from '../../types'
 import Input from '../shared/Input'
 import Button from '../shared/Button'
+
+const FREQUENCY_OPTIONS: { value: JobFrequency; label: string }[] = [
+  { value: 'once', label: 'Une seule fois' },
+  { value: 'daily', label: 'Tous les jours' },
+  { value: 'weekly', label: 'Toutes les semaines' },
+  { value: 'specific_day', label: 'Un jour précis' },
+  { value: 'monthly', label: 'Tous les mois' },
+]
+
+const DAY_NAMES = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
 interface JobFormProps {
   onSubmit: (job: Job) => void
@@ -19,6 +29,8 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
   const [description, setDescription] = useState(initialData?.description || '')
   const [reward, setReward] = useState(initialData?.reward.toString() || '')
   const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || '🧹')
+  const [frequency, setFrequency] = useState<JobFrequency>(initialData?.frequency || 'once')
+  const [frequencyDay, setFrequencyDay] = useState<number>(initialData?.frequencyDay ?? 1)
   const [errors, setErrors] = useState<Record<string, string | null>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,6 +61,8 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
       acceptedAt: initialData?.acceptedAt,
       completedAt: initialData?.completedAt,
       icon: selectedIcon,
+      frequency,
+      frequencyDay: frequency === 'specific_day' ? frequencyDay : undefined,
     }
 
     onSubmit(job)
@@ -120,6 +134,52 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Fréquence */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Fréquence
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {FREQUENCY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFrequency(opt.value)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                frequency === opt.value
+                  ? 'bg-primary text-white ring-2 ring-primary ring-offset-1'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sélection du jour pour 'specific_day' */}
+        {frequency === 'specific_day' && (
+          <div className="mt-3">
+            <label className="block text-sm text-gray-600 mb-1">Quel jour ?</label>
+            <div className="flex flex-wrap gap-2">
+              {DAY_NAMES.map((day, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setFrequencyDay(index)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    frequencyDay === index
+                      ? 'bg-indigo-600 text-white ring-2 ring-indigo-600 ring-offset-1'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {day.slice(0, 3)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}

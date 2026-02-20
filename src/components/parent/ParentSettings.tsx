@@ -3,7 +3,7 @@ import { Settings, Download, Upload, AlertTriangle, Link, Copy, Check, Unlink } 
 import { useApp } from '../../context/AppContext'
 import { hashPin, verifyPin, validatePin } from '../../utils/pin'
 import { exportToJSON, importFromJSON } from '../../utils/storage'
-import { generateFamilyCode, pushStateToCloud } from '../../utils/sync'
+import { generateFamilyCode, pushStateToCloud, deleteFromCloud } from '../../utils/sync'
 import Input from '../shared/Input'
 import Button from '../shared/Button'
 import Modal from '../shared/Modal'
@@ -27,13 +27,22 @@ export default function ParentSettings() {
 
   // Sync
   const [codeCopied, setCodeCopied] = useState(false)
+  const [isActivatingSync, setIsActivatingSync] = useState(false)
   const familyCode = parentSettings?.familyCode
 
+  // Bug 4 fix : generateFamilyCode est maintenant async (vérifie l'unicité)
   const handleActivateSync = async () => {
-    const code = generateFamilyCode()
-    dispatch({ type: 'UPDATE_PARENT_SETTINGS', payload: { familyCode: code } })
-    // Push immédiatement avec le nouveau code
-    await pushStateToCloud(code, { ...state, parentSettings: { ...parentSettings!, familyCode: code } })
+    setIsActivatingSync(true)
+    try {
+      const code = await generateFamilyCode()
+      dispatch({ type: 'UPDATE_PARENT_SETTINGS', payload: { familyCode: code } })
+      // Push immédiatement avec le nouveau code
+      await pushStateToCloud(code, { ...state, parentSettings: { ...parentSettings!, familyCode: code } })
+    } catch (err) {
+      alert('Erreur lors de la génération du code. Veuillez réessayer.')
+    } finally {
+      setIsActivatingSync(false)
+    }
   }
 
   const handleCopyCode = () => {
@@ -44,7 +53,11 @@ export default function ParentSettings() {
     })
   }
 
-  const handleDeactivateSync = () => {
+  // Bug 3 fix : supprimer les données cloud lors de la désactivation
+  const handleDeactivateSync = async () => {
+    if (familyCode) {
+      await deleteFromCloud(familyCode)
+    }
     dispatch({ type: 'UPDATE_PARENT_SETTINGS', payload: { familyCode: undefined } })
   }
 
@@ -131,11 +144,19 @@ export default function ParentSettings() {
           payload: { ...importedData, parentSettings: state.parentSettings },
         })
       } else {
+        // Bug 6 fix : dédupliquer par ID lors de la fusion
+        const mergeById = <T extends { id: string }>(local: T[], imported: T[]): T[] => {
+          const map = new Map<string, T>()
+          local.forEach((item) => map.set(item.id, item))
+          imported.forEach((item) => { if (!map.has(item.id)) map.set(item.id, item) })
+          return Array.from(map.values())
+        }
         const mergedState = {
-          transactions: [...state.transactions, ...importedData.transactions],
-          goals: [...state.goals, ...importedData.goals],
-          jobs: [...state.jobs, ...(importedData.jobs || [])],
+          transactions: mergeById(state.transactions, importedData.transactions),
+          goals: mergeById(state.goals, importedData.goals),
+          jobs: mergeById(state.jobs, importedData.jobs || []),
           parentSettings: state.parentSettings,
+          deletedIds: state.deletedIds,
         }
         dispatch({ type: 'LOAD_STATE', payload: mergedState })
       }
@@ -259,9 +280,9 @@ export default function ParentSettings() {
         </p>
 
         {!familyCode ? (
-          <Button onClick={handleActivateSync} className="flex items-center gap-2">
+          <Button onClick={handleActivateSync} disabled={isActivatingSync} className="flex items-center gap-2">
             <Link size={18} />
-            Activer la synchronisation
+            {isActivatingSync ? 'Activation...' : 'Activer la synchronisation'}
           </Button>
         ) : (
           <div className="space-y-4">

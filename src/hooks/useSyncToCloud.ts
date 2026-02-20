@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { AppState } from '../types'
-import { pushStateToCloud } from '../utils/sync'
+import { pushStateToCloud, hashState } from '../utils/sync'
 
 export function useSyncToCloud(state: AppState, onStatusChange?: (pending: boolean) => void) {
   const timeoutRef = useRef<number | null>(null)
-  // Contenu du dernier push réussi - évite de repousser l'écho du Realtime
-  const lastPushedRef = useRef<string>('')
+  const lastPushedHashRef = useRef<string>('')
 
   const familyCode =
     state.parentSettings?.familyCode ?? state.linkedFamilyCode
@@ -13,10 +12,10 @@ export function useSyncToCloud(state: AppState, onStatusChange?: (pending: boole
   useEffect(() => {
     if (!familyCode) return
 
-    const serialized = JSON.stringify(state)
+    const currentHash = hashState(state)
 
-    // Si le state est identique au dernier push, c'est l'écho du Realtime : on ignore
-    if (serialized === lastPushedRef.current) {
+    // Bug 1 fix : ne pas re-push si l'état n'a pas changé (évite la boucle push→realtime→merge→push)
+    if (currentHash === lastPushedHashRef.current) {
       onStatusChange?.(false)
       return
     }
@@ -28,8 +27,10 @@ export function useSyncToCloud(state: AppState, onStatusChange?: (pending: boole
     onStatusChange?.(true)
 
     timeoutRef.current = window.setTimeout(async () => {
-      lastPushedRef.current = serialized
-      await pushStateToCloud(familyCode, state)
+      const success = await pushStateToCloud(familyCode, state)
+      if (success) {
+        lastPushedHashRef.current = currentHash
+      }
       onStatusChange?.(false)
     }, 1000)
 

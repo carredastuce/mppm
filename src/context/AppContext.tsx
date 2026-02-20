@@ -6,7 +6,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useSyncToCloud } from '../hooks/useSyncToCloud'
 import { loadFromLocalStorage } from '../utils/storage'
 import { calculateDueAllowances } from '../utils/allowance'
-import { pullStateFromCloud, subscribeToFamily } from '../utils/sync'
+import { pullStateFromCloud, subscribeToFamily, hashState } from '../utils/sync'
 
 interface AppContextType {
   state: AppState
@@ -59,46 +59,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Effet 1 : Au mount, pull depuis Supabase + subscribe aux changements Realtime
+  // Amél 2 fix : familyCode en tant que valeur dérivée pour les dépendances
+  const familyCode = state.parentSettings?.familyCode ?? state.linkedFamilyCode
+
+  // Bug 1 fix : ref pour stocker le hash du dernier état reçu via Realtime/pull
+  const lastReceivedHashRef = useRef<string>('')
+
+  // Dispatch SYNC_STATE avec guard anti-boucle
+  const safeSyncDispatch = (remote: AppState) => {
+    const remoteHash = hashState(remote)
+    if (remoteHash === lastReceivedHashRef.current) return
+    if (remoteHash === hashState(state)) return
+    lastReceivedHashRef.current = remoteHash
+    dispatch({ type: 'SYNC_STATE', payload: remote })
+  }
+
+  // Effet 1 : Pull depuis Supabase + subscribe Realtime
+  // Amél 2 fix : dépend de familyCode pour se reconnecter si le code change
   useEffect(() => {
-    const savedData = loadFromLocalStorage()
-    const familyCode =
-      savedData?.parentSettings?.familyCode ?? savedData?.linkedFamilyCode
     if (!familyCode) return
 
     // Pull initial
     pullStateFromCloud(familyCode).then((remote) => {
-      if (remote) dispatch({ type: 'SYNC_STATE', payload: remote })
+      if (remote) safeSyncDispatch(remote)
     })
 
     // Subscribe Realtime
     const unsubscribe = subscribeToFamily(familyCode, (remote) => {
-      dispatch({ type: 'SYNC_STATE', payload: remote })
+      safeSyncDispatch(remote)
     })
 
     return unsubscribe
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyCode])
 
   // Effet 2 : Pull au retour du focus / visibilitychange
+  // Bug 2 fix : nettoyage correct des deux listeners
   useEffect(() => {
     const handleFocus = () => {
-      const familyCode =
-        state.parentSettings?.familyCode ?? state.linkedFamilyCode
       if (!familyCode) return
       pullStateFromCloud(familyCode).then((remote) => {
-        if (remote) dispatch({ type: 'SYNC_STATE', payload: remote })
+        if (remote) safeSyncDispatch(remote)
       })
     }
 
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'visible') handleFocus()
-    })
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [state.parentSettings?.familyCode, state.linkedFamilyCode])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyCode])
 
   // Auto-sauvegarde locale
   useLocalStorage(state)

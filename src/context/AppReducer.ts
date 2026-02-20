@@ -96,9 +96,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'DELETE_JOB': {
       const jobToDelete = state.jobs.find((job) => job.id === action.payload)
-      let deletedIds = addToDeleted(state.deletedIds, 'jobs', action.payload)
+      let newDeletedIds = addToDeleted(state.deletedIds, 'jobs', action.payload)
       if (jobToDelete?.transactionId) {
-        deletedIds = addToDeleted(deletedIds, 'transactions', jobToDelete.transactionId)
+        newDeletedIds = addToDeleted(newDeletedIds, 'transactions', jobToDelete.transactionId)
       }
       return {
         ...state,
@@ -106,7 +106,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         transactions: jobToDelete?.transactionId
           ? state.transactions.filter((tx) => tx.id !== jobToDelete.transactionId)
           : state.transactions,
-        deletedIds,
+        deletedIds: newDeletedIds,
       }
     }
 
@@ -135,11 +135,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: [transaction, ...state.transactions],
-        jobs: state.jobs.map((job) =>
-          job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
-            : job
-        ),
+        jobs: state.jobs.map((job) => {
+          if (job.id !== jobId) return job
+          const isRecurring = job.frequency && job.frequency !== 'once'
+          if (isRecurring) {
+            return { ...job, status: 'available', acceptedAt: undefined, completedAt: undefined, transactionId: undefined }
+          }
+          return { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
+        }),
       }
     }
 
@@ -159,19 +162,23 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         transactions: [transaction, ...state.transactions],
-        jobs: state.jobs.map((job) =>
-          job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
-            : job
-        ),
+        jobs: state.jobs.map((job) => {
+          if (job.id !== jobId) return job
+          const isRecurring = job.frequency && job.frequency !== 'once'
+          if (isRecurring) {
+            return { ...job, status: 'available', acceptedAt: undefined, completedAt: undefined, transactionId: undefined }
+          }
+          return { ...job, status: 'completed', completedAt: new Date().toISOString(), transactionId: transaction.id }
+        }),
       }
     }
 
+    // Bug 5 fix : préserver deletedIds si le payload n'en contient pas
     case 'LOAD_STATE':
       return {
         ...action.payload,
         parentSettings: action.payload.parentSettings ?? state.parentSettings,
-        deletedIds: action.payload.deletedIds ?? emptyDeletedIds(),
+        deletedIds: action.payload.deletedIds ?? state.deletedIds ?? emptyDeletedIds(),
       }
 
     case 'RESET_STATE':
