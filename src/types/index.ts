@@ -33,6 +33,7 @@ export interface Job {
   frequency?: JobFrequency
   frequencyDay?: number // 0-6 (dimanche-samedi) pour 'specific_day'
   requiresValidation?: boolean // true par défaut : l'enfant soumet, le parent valide
+  dueDate?: string // date limite ISO optionnelle
 }
 
 export interface Allowance {
@@ -50,6 +51,8 @@ export interface ParentSettings {
   allowance?: Allowance
   familyCode?: string
 }
+
+export type ChildTab = 'dashboard' | 'transactions' | 'goals' | 'jobs' | 'simulator'
 
 export type ParentTab = 'dashboard' | 'allowance' | 'jobs' | 'history' | 'settings'
 

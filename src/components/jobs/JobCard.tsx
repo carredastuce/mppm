@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
+import { differenceInCalendarDays } from 'date-fns'
 import { CheckCircle, Clock, Trash2, Edit, Star, Hourglass, ThumbsUp, ThumbsDown, Repeat } from 'lucide-react'
 import { Job, Transaction } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
@@ -121,6 +122,15 @@ export default function JobCard({
   const hasParentValidation = !!(onSubmit || onValidate) && job.requiresValidation !== false
   const frequencyLabel = getFrequencyLabel(job)
 
+  const dueBadge = (() => {
+    if (!job.dueDate || job.status === 'completed') return null
+    const days = differenceInCalendarDays(new Date(job.dueDate), new Date())
+    if (days < 0) return { label: 'Expiré', className: 'bg-gray-300 text-gray-700' }
+    if (days === 0) return { label: 'URGENT – aujourd\'hui', className: 'bg-red-500 text-white' }
+    if (days === 1) return { label: 'URGENT – demain', className: 'bg-orange-400 text-white' }
+    return { label: `dans ${days} jours`, className: 'bg-green-100 text-green-700' }
+  })()
+
   return (
     <>
       <div className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 border-2 ${job.status === 'pending_validation' ? 'border-purple-300' : 'border-gray-100'}`}>
@@ -135,6 +145,11 @@ export default function JobCard({
               <div className="bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Repeat size={12} />
                 {frequencyLabel}
+              </div>
+            )}
+            {dueBadge && (
+              <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${dueBadge.className}`}>
+                ⏰ {dueBadge.label}
               </div>
             )}
           </div>

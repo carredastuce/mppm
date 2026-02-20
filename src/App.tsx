@@ -1,20 +1,22 @@
 import { useState } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import UpdatePrompt from './components/shared/UpdatePrompt'
+import UndoToast from './components/shared/UndoToast'
 import Header from './components/layout/Header'
 import Navigation from './components/layout/Navigation'
 import Dashboard from './components/dashboard/Dashboard'
 import TransactionList from './components/transactions/TransactionList'
 import GoalsList from './components/goals/GoalsList'
 import JobsList from './components/jobs/JobsList'
+import Simulator from './components/simulator/Simulator'
 import ParentLayout from './components/parent/ParentLayout'
 import PinModal from './components/parent/PinModal'
-import { ParentTab } from './types'
+import { ChildTab, ParentTab } from './types'
 import { hashPin, verifyPin } from './utils/pin'
 
 function AppContent() {
   const { state, dispatch } = useApp()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'goals' | 'jobs'>('dashboard')
+  const [activeTab, setActiveTab] = useState<ChildTab>('dashboard')
   const [isParentMode, setIsParentMode] = useState(false)
   const [parentTab, setParentTab] = useState<ParentTab>('dashboard')
   const [showPinModal, setShowPinModal] = useState(false)
@@ -74,9 +76,12 @@ function AppContent() {
             {activeTab === 'transactions' && <TransactionList />}
             {activeTab === 'goals' && <GoalsList />}
             {activeTab === 'jobs' && <JobsList />}
+            {activeTab === 'simulator' && <Simulator />}
           </main>
         </>
       )}
+
+      <UndoToast />
 
       <PinModal
         isOpen={showPinModal}

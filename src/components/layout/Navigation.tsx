@@ -1,8 +1,9 @@
-import { Home, List, Target, Briefcase } from 'lucide-react'
+import { Home, List, Target, Briefcase, Calculator } from 'lucide-react'
+import { ChildTab } from '../../types'
 
 interface NavigationProps {
-  activeTab: 'dashboard' | 'transactions' | 'goals' | 'jobs'
-  onTabChange: (tab: 'dashboard' | 'transactions' | 'goals' | 'jobs') => void
+  activeTab: ChildTab
+  onTabChange: (tab: ChildTab) => void
 }
 
 export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
@@ -11,6 +12,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
     { id: 'transactions' as const, label: 'Transactions', icon: List },
     { id: 'goals' as const, label: 'Objectifs', icon: Target },
     { id: 'jobs' as const, label: 'Boulots', icon: Briefcase },
+    { id: 'simulator' as const, label: 'Simulateur', icon: Calculator },
   ]
 
   return (

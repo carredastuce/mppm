@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
-import { Transaction, Goal } from '../../types'
+import { Transaction, Goal, ChildTab } from '../../types'
 import { calculateBalance } from '../../utils/calculations'
 import BalanceCard from './BalanceCard'
+import BalanceChart from './BalanceChart'
+import AllowanceBanner from './AllowanceBanner'
+import NotificationBanner from './NotificationBanner'
 import QuickActions from './QuickActions'
 import RecentTransactions from './RecentTransactions'
 import GoalCard from '../goals/GoalCard'
@@ -12,7 +15,7 @@ import Modal from '../shared/Modal'
 import Button from '../shared/Button'
 
 interface DashboardProps {
-  onNavigate: (tab: 'transactions' | 'goals' | 'jobs') => void
+  onNavigate: (tab: ChildTab) => void
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
@@ -72,6 +75,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </p>
       </div>
 
+      {/* Notifications visuelles (nouveautés depuis dernière visite) */}
+      <NotificationBanner jobs={state.jobs} transactions={state.transactions} />
+
       {/* Alerte solde bas */}
       {state.parentSettings?.spendingWarningThreshold != null &&
         balance < state.parentSettings.spendingWarningThreshold && (
@@ -85,6 +91,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Carte de solde */}
       <BalanceCard balance={balance} />
+
+      {/* Prochain versement d'argent de poche */}
+      {state.parentSettings?.allowance && (
+        <AllowanceBanner allowance={state.parentSettings.allowance} />
+      )}
+
+      {/* Graphique évolution du solde */}
+      <BalanceChart transactions={state.transactions} />
 
       {/* Actions rapides */}
       <QuickActions onAddTransaction={handleAddTransaction} />

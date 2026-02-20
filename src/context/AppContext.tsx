@@ -12,6 +12,8 @@ interface AppContextType {
   state: AppState
   dispatch: React.Dispatch<AppAction>
   syncPending: boolean
+  canUndo: boolean
+  undo: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -20,6 +22,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState)
   const allowanceProcessedRef = useRef(false)
   const [syncPending, setSyncPending] = useState(false)
+  const undoSnapshotRef = useRef<AppState | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [canUndo, setCanUndo] = useState(false)
+
+  const DESTRUCTIVE_ACTIONS = new Set([
+    'DELETE_TRANSACTION', 'DELETE_GOAL', 'DELETE_JOB', 'COMPLETE_JOB',
+  ])
+
+  const dispatchWithHistory: React.Dispatch<AppAction> = (action) => {
+    if (DESTRUCTIVE_ACTIONS.has(action.type)) {
+      undoSnapshotRef.current = state
+      setCanUndo(true)
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      undoTimerRef.current = setTimeout(() => {
+        undoSnapshotRef.current = null
+        setCanUndo(false)
+      }, 5000)
+    }
+    dispatch(action)
+  }
+
+  const undo = () => {
+    if (!undoSnapshotRef.current) return
+    dispatch({ type: 'LOAD_STATE', payload: undoSnapshotRef.current })
+    undoSnapshotRef.current = null
+    setCanUndo(false)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+  }
 
   // Charger les données au démarrage
   useEffect(() => {
@@ -124,7 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useSyncToCloud(state, setSyncPending)
 
   return (
-    <AppContext.Provider value={{ state, dispatch, syncPending }}>
+    <AppContext.Provider value={{ state, dispatch: dispatchWithHistory, syncPending, canUndo, undo }}>
       {children}
     </AppContext.Provider>
   )

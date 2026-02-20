@@ -3,6 +3,7 @@ import { calculateBalance, calculateSpendingThisMonth, calculateIncomeThisMonth,
 import { formatCurrency } from '../../utils/formatters'
 import { TrendingDown, TrendingUp, Wallet, Target, Briefcase, ArrowRight } from 'lucide-react'
 import ProgressBar from '../shared/ProgressBar'
+import BalanceChart from '../dashboard/BalanceChart'
 import { calculateGoalProgress } from '../../utils/calculations'
 import { ParentTab } from '../../types'
 
@@ -58,6 +59,9 @@ export default function ParentDashboard({ onNavigate }: ParentDashboardProps) {
           <p className="text-sm text-gray-400 mt-1">Cette semaine : {formatCurrency(spendingWeek)}</p>
         </div>
       </div>
+
+      {/* Graphique évolution du solde */}
+      <BalanceChart transactions={state.transactions} />
 
       {/* Top dépenses par catégorie */}
       {topExpenses.length > 0 && (

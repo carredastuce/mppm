@@ -32,6 +32,9 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
   const [frequency, setFrequency] = useState<JobFrequency>(initialData?.frequency || 'once')
   const [frequencyDay, setFrequencyDay] = useState<number>(initialData?.frequencyDay ?? 1)
   const [requiresValidation, setRequiresValidation] = useState<boolean>(initialData?.requiresValidation !== false)
+  const [dueDate, setDueDate] = useState<string>(
+    initialData?.dueDate ? initialData.dueDate.slice(0, 10) : ''
+  )
   const [errors, setErrors] = useState<Record<string, string | null>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,6 +68,7 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
       frequency,
       frequencyDay: frequency === 'specific_day' ? frequencyDay : undefined,
       requiresValidation,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
     }
 
     onSubmit(job)
@@ -182,6 +186,20 @@ export default function JobForm({ onSubmit, onCancel, initialData }: JobFormProp
             </div>
           </div>
         )}
+      </div>
+
+      {/* Date limite */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Date limite <span className="text-gray-400 font-normal">(optionnel)</span>
+        </label>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          min={new Date().toISOString().slice(0, 10)}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+        />
       </div>
 
       {/* Validation parentale */}
