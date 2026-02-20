@@ -48,12 +48,19 @@ export interface ParentSettings {
 
 export type ParentTab = 'dashboard' | 'allowance' | 'jobs' | 'history' | 'settings'
 
+export interface DeletedIds {
+  transactions: string[]
+  goals: string[]
+  jobs: string[]
+}
+
 export interface AppState {
   transactions: Transaction[]
   goals: Goal[]
   jobs: Job[]
   parentSettings?: ParentSettings
   linkedFamilyCode?: string
+  deletedIds?: DeletedIds
 }
 
 export type TransactionType = 'income' | 'expense'

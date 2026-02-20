@@ -20,6 +20,7 @@ interface GoalCardProps {
 
 export default function GoalCard({ goal, balance, onAddMoney, onEdit, onDelete }: GoalCardProps) {
   const [isAddMoneyModalOpen, setIsAddMoneyModalOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
@@ -67,9 +68,12 @@ export default function GoalCard({ goal, balance, onAddMoney, onEdit, onDelete }
   }
 
   const handleDelete = () => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'objectif "${goal.name}" ?`)) {
-      onDelete(goal.id)
-    }
+    setIsDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    setIsDeleteConfirmOpen(false)
+    onDelete(goal.id)
   }
 
   return (
@@ -198,6 +202,27 @@ export default function GoalCard({ goal, balance, onAddMoney, onEdit, onDelete }
                 setError(null)
               }}
             >
+              Annuler
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal confirmation suppression */}
+      <Modal
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        title="Supprimer l'objectif"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Êtes-vous sûr de vouloir supprimer l'objectif <strong>"{goal.name}"</strong> ?
+          </p>
+          <div className="flex gap-3">
+            <Button variant="danger" onClick={handleConfirmDelete} className="flex-1">
+              Supprimer
+            </Button>
+            <Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1">
               Annuler
             </Button>
           </div>
